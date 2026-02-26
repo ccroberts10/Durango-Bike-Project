@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBP Staff — Menu Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --espresso: #1A0F0A;
+    --roast: #2E1A0E;
+    --caramel: #C17F3A;
+    --caramel-light: #D4954A;
+    --cream: #F5EDD8;
+    --warm-gray: #9A8A78;
+    --mid: #4A3525;
+    --red: #C0392B;
+    --green: #27AE60;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--espresso); color:var(--cream); font-family:'DM Sans',sans-serif; min-height:100vh; }
+
+  /* PIN SCREEN */
+  .pin-screen {
+    min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px; gap:24px;
+  }
+  .pin-logo { font-size:40px; margin-bottom:4px; }
+  .pin-title { font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:var(--cream); text-align:center; }
+  .pin-sub { font-size:13px; color:var(--warm-gray); text-align:center; }
+  .pin-box {
+    background:var(--roast); border:1px solid var(--mid); border-radius:16px;
+    padding:32px; max-width:320px; width:100%; display:flex; flex-direction:column; gap:14px;
+  }
+  .pin-input {
+    width:100%; background:var(--espresso); border:1px solid var(--mid); border-radius:10px;
+    padding:14px 16px; color:var(--cream); font-family:'DM Sans',sans-serif;
+    font-size:24px; letter-spacing:6px; text-align:center; outline:none;
+    transition:border-color 0.2s;
+  }
+  .pin-input:focus { border-color:var(--caramel); }
+  .pin-input::placeholder { letter-spacing:2px; font-size:14px; color:var(--warm-gray); }
+  .pin-btn {
+    width:100%; background:var(--caramel); color:var(--espresso); border:none;
+    padding:14px; border-radius:50px; font-family:'DM Sans',sans-serif;
+    font-size:15px; font-weight:700; cursor:pointer; transition:all 0.2s;
+  }
+  .pin-btn:hover { background:var(--caramel-light); }
+  .pin-error { font-size:13px; color:#FF6B6B; text-align:center; display:none; }
+
+  /* ADMIN PAGE */
+  .admin-page { display:none; max-width:600px; margin:0 auto; padding:24px; }
+
+  header {
+    background:var(--roast); border-bottom:2px solid var(--caramel);
+    padding:14px 24px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100; margin:-24px -24px 24px;
+  }
+  .header-left { display:flex; align-items:center; gap:10px; }
+  .header-title { font-family:'Playfair Display',serif; font-size:18px; font-weight:900; color:var(--cream); }
+  .header-sub { font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--caramel); }
+
+  .logout-btn {
+    background:transparent; border:1px solid var(--mid); color:var(--warm-gray);
+    padding:6px 14px; border-radius:50px; font-family:'DM Sans',sans-serif;
+    font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;
+  }
+  .logout-btn:hover { border-color:var(--warm-gray); color:var(--cream); }
+
+  .stock-summary {
+    background:var(--roast); border:1px solid var(--mid); border-radius:12px;
+    padding:16px 20px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .summary-label { font-size:12px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--warm-gray); }
+  .summary-count { font-family:'Playfair Display',serif; font-size:28px; font-weight:900; color:var(--red); }
+  .summary-count.all-good { color:var(--green); }
+  .restock-all {
+    background:var(--green); color:white; border:none;
+    padding:8px 16px; border-radius:50px; font-family:'DM Sans',sans-serif;
+    font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s;
+    display:none;
+  }
+  .restock-all:hover { opacity:0.85; }
+
+  .cat-section { margin-bottom:28px; }
+  .cat-label {
+    font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--cream);
+    margin-bottom:4px;
+  }
+  .cat-divider { width:28px; height:2px; background:var(--caramel); margin-bottom:12px; border-radius:2px; }
+
+  .item-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 16px; background:var(--roast); border:1px solid var(--mid);
+    border-radius:10px; margin-bottom:8px; transition:all 0.2s; gap:12px;
+  }
+  .item-row.sold-out { opacity:0.55; border-color:var(--red); background:rgba(192,57,43,0.08); }
+
+  .item-info { flex:1; }
+  .item-name { font-size:15px; font-weight:600; color:var(--cream); }
+  .item-name.sold-out { text-decoration:line-through; color:var(--warm-gray); }
+  .item-price { font-size:12px; color:var(--warm-gray); margin-top:1px; }
+
+  /* Toggle switch */
+  .toggle-wrap { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .toggle-label { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--green); transition:color 0.2s; }
+  .toggle-label.sold-out { color:var(--red); }
+
+  .toggle {
+    position:relative; width:48px; height:26px; flex-shrink:0;
+  }
+  .toggle input { opacity:0; width:0; height:0; position:absolute; }
+  .toggle-slider {
+    position:absolute; inset:0; background:var(--green); border-radius:50px;
+    cursor:pointer; transition:all 0.25s;
+  }
+  .toggle-slider::before {
+    content:''; position:absolute; width:20px; height:20px;
+    left:3px; top:3px; background:white; border-radius:50%;
+    transition:transform 0.25s;
+  }
+  .toggle input:not(:checked) + .toggle-slider { background:var(--red); }
+  .toggle input:not(:checked) + .toggle-slider::before { transform:translateX(0); }
+  .toggle input:checked + .toggle-slider::before { transform:translateX(22px); }
+
+  .saving-indicator {
+    position:fixed; bottom:24px; right:24px;
+    background:var(--roast); border:1px solid var(--mid); border-radius:50px;
+    padding:10px 18px; font-size:13px; font-weight:600; color:var(--warm-gray);
+    opacity:0; transition:opacity 0.2s; pointer-events:none;
+  }
+  .saving-indicator.show { opacity:1; }
+  .saving-indicator.saved { color:var(--green); }
+</style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-logo">🚲</div>
+  <div class="pin-title">Staff Menu Manager</div>
+  <div class="pin-sub">Durango Bike Project</div>
+  <div class="pin-box">
+    <input type="password" class="pin-input" id="pin-input" placeholder="Enter PIN" maxlength="8"
+      onkeydown="if(event.key==='Enter') checkPin()">
+    <button class="pin-btn" onclick="checkPin()">Unlock →</button>
+    <div class="pin-error" id="pin-error">❌ Wrong PIN — try again</div>
+  </div>
+</div>
+
+<!-- ADMIN PAGE -->
+<div class="admin-page" id="admin-page">
+  <header>
+    <div class="header-left">
+      <span style="font-size:22px">🚲</span>
+      <div>
+        <div class="header-title">Menu Manager</div>
+        <div class="header-sub">Staff Only</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Lock</button>
+  </header>
+
+  <div class="stock-summary">
+    <div>
+      <div class="summary-label">Items Sold Out</div>
+      <div class="summary-count" id="summary-count">0</div>
+    </div>
+    <button class="restock-all" id="restock-all-btn" onclick="restockAll()">✓ Restock All</button>
+  </div>
+
+  <div id="menu-list"></div>
+</div>
+
+<div class="saving-indicator" id="saving-indicator">Saving...</div>
+
+<script>
+const SERVER = 'https://durango-bike-project-production.up.railway.app';
+
+const MENU_ITEMS = {
+  "Hot Coffee": [
+    {name:"Americano", price:3.50},
+    {name:"Espresso", price:3.50},
+    {name:"Cortado", price:4.25},
+    {name:"Macchiato", price:4.25},
+    {name:"London Fog", price:4.00},
+    {name:"Hot Tea", price:3.00},
+    {name:"Hot Coffee (8oz)", price:2.25},
+    {name:"Hot Coffee (12oz)", price:2.75},
+    {name:"Hot Coffee (16oz)", price:3.50},
+    {name:"Latte (8oz)", price:4.50},
+    {name:"Latte (12oz)", price:5.00},
+    {name:"Latte (16oz)", price:5.30},
+    {name:"Cappuccino (8oz)", price:4.50},
+    {name:"Cappuccino (12oz)", price:5.50},
+    {name:"Cappuccino (16oz)", price:6.25},
+    {name:"Mocha (8oz)", price:5.50},
+    {name:"Mocha (12oz)", price:5.75},
+    {name:"Mocha (16oz)", price:6.25},
+    {name:"Breve (8oz)", price:5.25},
+    {name:"Breve (12oz)", price:5.75},
+    {name:"Breve (16oz)", price:6.30},
+    {name:"Chai (8oz)", price:5.00},
+    {name:"Chai (12oz)", price:5.25},
+    {name:"Chai (16oz)", price:5.50},
+    {name:"Horchata Latte (8oz)", price:6.00},
+    {name:"Horchata Latte (12oz)", price:6.50},
+    {name:"Horchata Latte (16oz)", price:7.00},
+    {name:"Hot Chocolate (8oz)", price:3.00},
+    {name:"Hot Chocolate (12oz)", price:3.50},
+    {name:"Hot Chocolate (16oz)", price:4.00},
+  ],
+  "Cold Coffee": [
+    {name:"Cold Brew", price:4.70},
+    {name:"Iced Americano", price:4.00},
+    {name:"Iced Latte", price:6.00},
+    {name:"Iced Mocha", price:6.60},
+    {name:"Iced Breve", price:6.60},
+    {name:"Iced Chai", price:6.00},
+    {name:"Iced Horchata Latte", price:6.75},
+    {name:"Affogato", price:6.60},
+    {name:"Nitro Float", price:8.40},
+    {name:"Root Beer Float", price:7.00},
+  ],
+  "Cold Beverages": [
+    {name:"Kombucha", price:6.00},
+    {name:"Zuberfizz Soda", price:3.00},
+    {name:"Skagua", price:2.00},
+  ],
+  "Pastry & Food": [
+    {name:"Breakfast Burrito", price:8.00},
+    {name:"Bagel w/ Cream Cheese", price:5.25},
+    {name:"Cinnamon Roll", price:4.50},
+    {name:"Brownie", price:4.25},
+    {name:"Blueberry Muffin", price:4.75},
+    {name:"Cookie (Choc Chip Walnut)", price:3.75},
+    {name:"Poptart", price:4.75},
+    {name:"Belgian Waffle", price:2.25},
+    {name:"Honey Stinger", price:2.00},
+    {name:"Day Old Pastries", price:2.00},
+  ],
+  "Sports Nutrition": [
+    {name:"EF Liquid Shot", price:3.50},
+    {name:"Tailwind Endurance Fuel", price:2.50},
+    {name:"Tailwind High Carb", price:4.00},
+    {name:"Tailwind Recovery", price:3.00},
+    {name:"Honey Stinger Energy Chew", price:3.50},
+  ],
+  "Coffee Bags": [
+    {name:"12oz DBP Coffee Bag", price:18.00},
+  ]
+};
+
+let pin = '';
+let soldOut = new Set();
+
+async function checkPin() {
+  const input = document.getElementById('pin-input').value;
+  const errEl = document.getElementById('pin-error');
+
+  // Verify PIN against server
+  const res = await fetch(`${SERVER}/api/soldout/verify`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({pin: input})
+  }).catch(() => null);
+
+  if (res && res.ok) {
+    pin = input;
+    errEl.style.display = 'none';
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('admin-page').style.display = 'block';
+    await loadSoldOut();
+    buildMenu();
+  } else {
+    errEl.style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+
+async function loadSoldOut() {
+  try {
+    const res = await fetch(`${SERVER}/api/soldout`);
+    const data = await res.json();
+    soldOut = new Set(data.soldOut || []);
+  } catch(e) {
+    soldOut = new Set();
+  }
+}
+
+function buildMenu() {
+  const container = document.getElementById('menu-list');
+  container.innerHTML = '';
+
+  Object.entries(MENU_ITEMS).forEach(([cat, items]) => {
+    const sec = document.createElement('div');
+    sec.className = 'cat-section';
+    sec.innerHTML = `<div class="cat-label">${cat}</div><div class="cat-divider"></div>`;
+
+    items.forEach(item => {
+      const isSoldOut = soldOut.has(item.name);
+      const row = document.createElement('div');
+      row.className = 'item-row' + (isSoldOut ? ' sold-out' : '');
+      row.id = 'row-' + slugify(item.name);
+      row.innerHTML = `
+        <div class="item-info">
+          <div class="item-name ${isSoldOut ? 'sold-out' : ''}" id="name-${slugify(item.name)}">${item.name}</div>
+          <div class="item-price">$${item.price.toFixed(2)}</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label ${isSoldOut ? 'sold-out' : ''}" id="lbl-${slugify(item.name)}">${isSoldOut ? 'SOLD OUT' : 'IN STOCK'}</span>
+          <label class="toggle">
+            <input type="checkbox" ${isSoldOut ? '' : 'checked'} onchange="toggleItem('${item.name}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      `;
+      sec.appendChild(row);
+    });
+    container.appendChild(sec);
+  });
+
+  updateSummary();
+}
+
+async function toggleItem(itemName, available) {
+  showSaving(false);
+  try {
+    const res = await fetch(`${SERVER}/api/soldout`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pin, item: itemName, available })
+    });
+    if (!res.ok) throw new Error();
+
+    if (available) { soldOut.delete(itemName); }
+    else { soldOut.add(itemName); }
+
+    // Update UI
+    const key = slugify(itemName);
+    const row = document.getElementById('row-' + key);
+    const nameEl = document.getElementById('name-' + key);
+    const lbl = document.getElementById('lbl-' + key);
+
+    row.className = 'item-row' + (!available ? ' sold-out' : '');
+    nameEl.className = 'item-name' + (!available ? ' sold-out' : '');
+    lbl.textContent = available ? 'IN STOCK' : 'SOLD OUT';
+    lbl.className = 'toggle-label' + (!available ? ' sold-out' : '');
+
+    updateSummary();
+    showSaving(true);
+  } catch(e) {
+    alert('Could not save — check your connection.');
+  }
+}
+
+async function restockAll() {
+  if (!confirm('Mark everything back in stock?')) return;
+  for (const item of [...soldOut]) {
+    await toggleItem(item, true);
+  }
+  buildMenu();
+}
+
+function updateSummary() {
+  const count = soldOut.size;
+  const el = document.getElementById('summary-count');
+  const btn = document.getElementById('restock-all-btn');
+  el.textContent = count;
+  el.className = 'summary-count' + (count === 0 ? ' all-good' : '');
+  btn.style.display = count > 0 ? 'block' : 'none';
+}
+
+function showSaving(done) {
+  const el = document.getElementById('saving-indicator');
+  el.textContent = done ? '✓ Saved' : 'Saving...';
+  el.className = 'saving-indicator show' + (done ? ' saved' : '');
+  if (done) setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+function logout() {
+  pin = '';
+  document.getElementById('admin-page').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('pin-input').value = '';
+}
+
+function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+
+// Allow Enter key on PIN input
+document.getElementById('pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPin();
+});
+</script>
+</body>
+</html>
