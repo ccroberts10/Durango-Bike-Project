@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Durango Bike Project — Order Ahead</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --espresso: #1A0F0A;
+    --roast: #2E1A0E;
+    --caramel: #C17F3A;
+    --caramel-light: #D4954A;
+    --cream: #F5EDD8;
+    --milk: #FAF5EA;
+    --warm-gray: #9A8A78;
+    --mid: #4A3525;
+    --green: #3D6B4A;
+    --white: #FFFDF8;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--espresso);
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Grain texture */
+  body::after {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events:none;
+    z-index:9999;
+  }
+
+  header {
+    background: var(--roast);
+    border-bottom: 1px solid var(--mid);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo-wrap { display:flex; align-items:center; gap:14px; }
+  .logo-icon { font-size:30px; }
+  .logo-text { }
+  .logo-text .top {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--cream);
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .logo-text .sub {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--caramel);
+  }
+
+  .cart-btn {
+    background: var(--caramel);
+    border: none;
+    color: var(--espresso);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  .cart-btn:hover { background: var(--caramel-light); transform: translateY(-1px); }
+  .cart-count {
+    background: var(--espresso);
+    color: var(--caramel);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .hero {
+    background: linear-gradient(135deg, var(--roast) 0%, #3D2010 100%);
+    padding: 48px 32px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--mid);
+  }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 900;
+    color: var(--cream);
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+
+  .hero h1 span { color: var(--caramel); }
+
+  .hero p {
+    font-size: 15px;
+    color: var(--warm-gray);
+    font-weight: 300;
+    max-width: 400px;
+    margin: 0 auto 20px;
+  }
+
+  .pickup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(193,127,58,0.15);
+    border: 1px solid rgba(193,127,58,0.3);
+    border-radius: 50px;
+    padding: 8px 18px;
+    font-size: 13px;
+    color: var(--caramel);
+    font-weight: 500;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* Menu */
+  .menu-area {
+    padding: 32px;
+    border-right: 1px solid var(--mid);
+  }
+
+  .cat-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    position: sticky;
+    top: 72px;
+    background: var(--espresso);
+    padding: 12px 0;
+    z-index: 50;
+  }
+
+  .cat-tab {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 7px 16px;
+    border-radius: 50px;
+    border: 1px solid var(--mid);
+    background: transparent;
+    color: var(--warm-gray);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .cat-tab:hover { color: var(--cream); border-color: var(--warm-gray); }
+  .cat-tab.active { background: var(--caramel); border-color: var(--caramel); color: var(--espresso); font-weight: 700; }
+
+  .category-section { margin-bottom: 40px; }
+
+  .cat-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 4px;
+  }
+
+  .cat-divider {
+    width: 40px; height: 2px;
+    background: var(--caramel);
+    margin-bottom: 20px;
+    border-radius: 2px;
+  }
+
+  .items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .item-card {
+    background: var(--roast);
+    border: 1px solid var(--mid);
+    border-radius: 12px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .item-card::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: linear-gradient(135deg, rgba(193,127,58,0.06), transparent);
+    opacity:0;
+    transition: opacity 0.2s;
+  }
+
+  .item-card:hover { border-color: var(--caramel); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .item-card:hover::before { opacity:1; }
+
+  .item-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--cream);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .item-desc {
+    font-size: 12px;
+    color: var(--warm-gray);
+    margin-bottom: 12px;
+    font-weight: 300;
+    line-height: 1.4;
+  }
+
+  .item-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .item-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--caramel);
+  }
+
+  .add-btn {
+    background: var(--caramel);
+    color: var(--espresso);
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: 300;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+
+  .add-btn:hover { background: var(--caramel-light); transform: scale(1.1); }
+
+  .size-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    display: inline-block;
+  }
+
+  /* Cart sidebar */
+  .cart-area {
+    padding: 32px 24px;
+    background: var(--roast);
+    position: sticky;
+    top: 72px;
+    height: calc(100vh - 72px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--mid);
+  }
+
+  .cart-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--warm-gray);
+    gap: 12px;
+  }
+
+  .cart-empty-icon { font-size: 40px; opacity:0.4; }
+  .cart-empty p { font-size: 14px; font-weight: 300; }
+
+  .cart-items { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--espresso);
+    border-radius: 8px;
+    border: 1px solid var(--mid);
+    animation: popIn 0.2s ease;
+  }
+
+  @keyframes popIn {
+    from { opacity:0; transform: scale(0.95); }
+    to { opacity:1; transform: scale(1); }
+  }
+
+  .cart-item-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cream);
+    line-height: 1.3;
+  }
+
+  .cart-item-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    color: var(--caramel);
+    white-space: nowrap;
+  }
+
+  .qty-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .qty-btn {
+    background: var(--mid);
+    border: none;
+    color: var(--cream);
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    line-height: 1;
+  }
+
+  .qty-btn:hover { background: var(--caramel); color: var(--espresso); }
+
+  .qty-num {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cream);
+    min-width: 16px;
+    text-align: center;
+  }
+
+  .cart-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--mid);
+  }
+
+  .subtotal-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+
+  .subtotal-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+  }
+
+  .subtotal-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--cream);
+  }
+
+  .name-input-wrap {
+    margin-bottom: 12px;
+  }
+
+  .name-input-wrap label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    margin-bottom: 6px;
+  }
+
+  .name-input-wrap input {
+    width: 100%;
+    background: var(--espresso);
+    border: 1px solid var(--mid);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .name-input-wrap input:focus { border-color: var(--caramel); }
+  .name-input-wrap input::placeholder { color: var(--warm-gray); }
+
+  .checkout-btn {
+    width: 100%;
+    background: var(--caramel);
+    color: var(--espresso);
+    border: none;
+    padding: 16px;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .checkout-btn:hover:not(:disabled) { background: var(--caramel-light); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(193,127,58,0.3); }
+  .checkout-btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+
+  .modal {
+    background: var(--roast);
+    border: 1px solid var(--mid);
+    border-radius: 16px;
+    padding: 36px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    transform: scale(0.95);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.open .modal { transform: scale(1); }
+
+  .modal-icon { font-size: 52px; margin-bottom: 16px; }
+
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--cream);
+    margin-bottom: 10px;
+  }
+
+  .modal p {
+    font-size: 15px;
+    color: var(--warm-gray);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .modal p strong { color: var(--caramel); }
+
+  .modal-close {
+    background: var(--caramel);
+    color: var(--espresso);
+    border: none;
+    padding: 14px 32px;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .modal-close:hover { background: var(--caramel-light); }
+
+  /* Item detail modal */
+  .item-modal-content .item-variants { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+
+  .variant-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--espresso);
+    border: 1px solid var(--mid);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .variant-btn:hover { border-color: var(--caramel); }
+  .variant-btn .vp {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px;
+    color: var(--caramel);
+  }
+
+  /* Note field */
+  .note-field {
+    width: 100%;
+    background: var(--espresso);
+    border: 1px solid var(--mid);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--cream);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+  .note-field:focus { border-color: var(--caramel); }
+  .note-field::placeholder { color: var(--warm-gray); }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .cart-area { position: fixed; bottom:0; left:0; right:0; top:auto; height:auto; max-height:60vh; border-top:2px solid var(--caramel); border-radius:20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s; z-index:90; }
+    .cart-area.open { transform: translateY(0); }
+    .hero { padding: 28px 20px; }
+    .menu-area { padding: 20px; padding-bottom: 120px; }
+    .mobile-cart-bar { display:flex !important; }
+  }
+
+  .mobile-cart-bar {
+    display: none;
+    position: fixed;
+    bottom: 0; left:0; right:0;
+    padding: 16px 20px;
+    background: var(--roast);
+    border-top: 1px solid var(--mid);
+    z-index: 89;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">🚲</div>
+    <div class="logo-text">
+      <div class="top">Durango Bike Project</div>
+      <div class="sub">Order Ahead · Coffee & More</div>
+    </div>
+  </div>
+  <button class="cart-btn" onclick="toggleMobileCart()">
+    🛒 Cart <span class="cart-count" id="cart-count">0</span>
+  </button>
+</header>
+
+<div class="hero">
+  <h1>Fresh Coffee,<br><span>Ready When You Are</span></h1>
+  <p>Order ahead, skip the wait — we'll have it ready for pickup.</p>
+  <div class="pickup-badge">📍 Pickup at Durango Bike Project</div>
+</div>
+
+<div class="layout">
+  <div class="menu-area">
+    <div class="cat-tabs" id="cat-tabs"></div>
+    <div id="menu-sections"></div>
+  </div>
+
+  <div class="cart-area" id="cart-area">
+    <div class="cart-title">Your Order</div>
+    <div id="cart-body">
+      <div class="cart-empty">
+        <div class="cart-empty-icon">☕</div>
+        <p>Your cart is empty.<br>Add something delicious!</p>
+      </div>
+    </div>
+    <div class="cart-footer" id="cart-footer" style="display:none">
+      <div class="subtotal-row">
+        <span class="subtotal-label">Total</span>
+        <span class="subtotal-val" id="cart-total">$0.00</span>
+      </div>
+      <div class="name-input-wrap">
+        <label>Your Name (for pickup)</label>
+        <input type="text" id="pickup-name" placeholder="e.g. Alex">
+      </div>
+      <button class="checkout-btn" onclick="placeOrder()">Place Order →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Item detail modal -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal item-modal-content">
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Order confirmation modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <h2>Order Placed!</h2>
+    <p>We got your order, <strong id="confirm-name"></strong>! We're making it now — come on over to pick it up.<br><br><strong>Durango Bike Project</strong></p>
+    <button class="modal-close" onclick="closeConfirm()">Awesome, Thanks!</button>
+  </div>
+</div>
+
+<div class="mobile-cart-bar">
+  <button class="checkout-btn" onclick="toggleMobileCart()">🛒 View Cart (<span id="mobile-cart-count">0</span> items)</button>
+</div>
+
+<script>
+const MENU = {
+  "Hot Coffee": [
+    { name:"Americano", price:3.50 },
+    { name:"Espresso", price:3.50 },
+    { name:"Hot Coffee", variants:[{size:"8oz",price:2.25},{size:"12oz",price:2.75},{size:"16oz",price:3.50}] },
+    { name:"Latte", variants:[{size:"8oz",price:4.50},{size:"12oz",price:5.00},{size:"16oz",price:5.30}] },
+    { name:"Cappuccino", variants:[{size:"8oz",price:4.50},{size:"12oz",price:5.50},{size:"16oz",price:6.25}] },
+    { name:"Mocha", variants:[{size:"8oz",price:5.50},{size:"12oz",price:5.75},{size:"16oz",price:6.25}] },
+    { name:"Breve", variants:[{size:"8oz",price:5.25},{size:"12oz",price:5.75},{size:"16oz",price:6.30}] },
+    { name:"Chai", variants:[{size:"8oz",price:5.00},{size:"12oz",price:5.25},{size:"16oz",price:5.50}] },
+    { name:"Horchata Latte", variants:[{size:"8oz",price:6.00},{size:"12oz",price:6.50},{size:"16oz",price:7.00}] },
+    { name:"Hot Chocolate", variants:[{size:"8oz",price:3.00},{size:"12oz",price:3.50},{size:"16oz",price:4.00}] },
+    { name:"Cortado", price:4.25 },
+    { name:"Macchiato", price:4.25 },
+    { name:"London Fog", price:4.00 },
+    { name:"Hot Tea", price:3.00 },
+  ],
+  "Cold Coffee": [
+    { name:"Cold Brew (16oz)", price:4.70 },
+    { name:"Iced Americano (16oz)", price:4.00 },
+    { name:"Iced Latte (16oz)", price:6.00 },
+    { name:"Iced Mocha (16oz)", price:6.60 },
+    { name:"Iced Breve (16oz)", price:6.60 },
+    { name:"Iced Chai", price:6.00 },
+    { name:"Iced Horchata Latte", price:6.75 },
+    { name:"Affogato", price:6.60 },
+    { name:"Nitro Float", price:8.40 },
+    { name:"Root Beer Float", price:7.00 },
+  ],
+  "Cold Beverages": [
+    { name:"Kombucha", price:6.00 },
+    { name:"Zuberfizz Soda", price:3.00 },
+    { name:"Skagua", price:2.00 },
+  ],
+  "Pastry & Food": [
+    { name:"Cinnamon Roll", price:4.50 },
+    { name:"Brownie", price:4.25 },
+    { name:"Blueberry Muffin", price:4.75 },
+    { name:"Cookie (Choc Chip Walnut)", price:3.75 },
+    { name:"Poptart", price:4.75 },
+    { name:"Bagel w/ Cream Cheese", price:5.25 },
+    { name:"Belgian Waffle", price:2.25 },
+    { name:"Breakfast Burrito", price:8.00 },
+    { name:"Honey Stinger", price:2.00 },
+    { name:"Day Old Pastries", price:2.00 },
+  ],
+  "Sports Nutrition": [
+    { name:"EF Liquid Shot", price:3.50 },
+    { name:"Tailwind Endurance Fuel", price:2.50 },
+    { name:"Tailwind High Carb", price:4.00 },
+    { name:"Tailwind Recovery", price:3.00 },
+    { name:"Honey Stinger Energy Chew", price:3.50 },
+  ],
+  "Coffee Bags": [
+    { name:"12oz DBP/81301 Coffee Bag", price:18.00 },
+  ]
+};
+
+let cart = [];
+
+function buildMenu() {
+  const tabsEl = document.getElementById('cat-tabs');
+  const sectionsEl = document.getElementById('menu-sections');
+  let first = true;
+
+  Object.entries(MENU).forEach(([cat, items]) => {
+    // Tab
+    const tab = document.createElement('button');
+    tab.className = 'cat-tab' + (first ? ' active' : '');
+    tab.textContent = cat;
+    tab.onclick = () => {
+      document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('cat-' + slugify(cat)).scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    tabsEl.appendChild(tab);
+
+    // Section
+    const sec = document.createElement('div');
+    sec.className = 'category-section';
+    sec.id = 'cat-' + slugify(cat);
+    sec.innerHTML = `<div class="cat-heading">${cat}</div><div class="cat-divider"></div>`;
+
+    const grid = document.createElement('div');
+    grid.className = 'items-grid';
+
+    items.forEach(item => {
+      if (item.variants) {
+        item.variants.forEach(v => {
+          grid.appendChild(makeCard(item.name, v.price, v.size, item, v));
+        });
+      } else {
+        grid.appendChild(makeCard(item.name, item.price, null, item, null));
+      }
+    });
+
+    sec.appendChild(grid);
+    sectionsEl.appendChild(sec);
+    first = false;
+  });
+}
+
+function makeCard(name, price, size, item, variant) {
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.innerHTML = `
+    ${size ? `<span class="size-tag">${size}</span>` : ''}
+    <div class="item-name">${name}</div>
+    <div class="item-footer">
+      <span class="item-price">$${price.toFixed(2)}</span>
+      <button class="add-btn" title="Add to cart">+</button>
+    </div>
+  `;
+  card.querySelector('.add-btn').onclick = (e) => {
+    e.stopPropagation();
+    addToCart(name + (size ? ` (${size})` : ''), price);
+  };
+  return card;
+}
+
+function addToCart(name, price, note='') {
+  const existing = cart.find(i => i.name === name && i.note === note);
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({ name, price, qty: 1, note, id: Date.now() });
+  }
+  renderCart();
+  closeItemModal();
+  flashCartBtn();
+}
+
+function flashCartBtn() {
+  const btn = document.querySelector('.cart-btn');
+  btn.style.transform = 'scale(1.08)';
+  setTimeout(() => btn.style.transform = '', 200);
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(i => i.id !== id);
+  renderCart();
+}
+
+function changeQty(id, delta) {
+  const item = cart.find(i => i.id === id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+  renderCart();
+}
+
+function renderCart() {
+  const body = document.getElementById('cart-body');
+  const footer = document.getElementById('cart-footer');
+  const countEl = document.getElementById('cart-count');
+  const mobileCount = document.getElementById('mobile-cart-count');
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const count = cart.reduce((s, i) => s + i.qty, 0);
+
+  countEl.textContent = count;
+  if (mobileCount) mobileCount.textContent = count;
+
+  if (cart.length === 0) {
+    body.innerHTML = `<div class="cart-empty"><div class="cart-empty-icon">☕</div><p>Your cart is empty.<br>Add something delicious!</p></div>`;
+    footer.style.display = 'none';
+    return;
+  }
+
+  footer.style.display = 'block';
+  document.getElementById('cart-total').textContent = '$' + total.toFixed(2);
+
+  body.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'cart-items';
+  cart.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'cart-item';
+    el.innerHTML = `
+      <div class="cart-item-name">${item.name}${item.note ? `<br><span style="font-size:11px;color:var(--warm-gray)">${item.note}</span>` : ''}</div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+      </div>
+      <div class="cart-item-price">$${(item.price * item.qty).toFixed(2)}</div>
+    `;
+    list.appendChild(el);
+  });
+  body.appendChild(list);
+}
+
+async function placeOrder() {
+  const name = document.getElementById('pickup-name').value.trim();
+  if (!name) { document.getElementById('pickup-name').focus(); return; }
+  if (cart.length === 0) return;
+
+  const btn = document.querySelector('.checkout-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending order...';
+
+  const orderLines = cart.map(i => `  • ${i.name} x${i.qty} = $${(i.price*i.qty).toFixed(2)}${i.note ? ' ['+i.note+']' : ''}`).join('\n');
+  const total = cart.reduce((s,i) => s + i.price*i.qty, 0);
+  const message = `🚲☕ NEW ORDER\nName: ${name}\n\n${orderLines}\n\nTOTAL: $${total.toFixed(2)}\n\nOrder time: ${new Date().toLocaleTimeString()}`;
+
+  try {
+    const res = await fetch('/send-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, customerName: name })
+    });
+
+    if (res.ok) {
+      document.getElementById('confirm-name').textContent = name;
+      document.getElementById('confirm-modal').classList.add('open');
+      cart = [];
+      renderCart();
+    } else {
+      alert('Something went wrong. Please tell staff at the counter.');
+    }
+  } catch(e) {
+    alert('Could not reach the server. Please try again or order at the counter.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Place Order →';
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  document.getElementById('pickup-name').value = '';
+}
+
+function closeItemModal() {
+  document.getElementById('item-modal').classList.remove('open');
+}
+
+document.getElementById('item-modal').onclick = (e) => {
+  if (e.target === e.currentTarget) closeItemModal();
+};
+
+function toggleMobileCart() {
+  document.getElementById('cart-area').classList.toggle('open');
+}
+
+function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+
+buildMenu();
+renderCart();
+</script>
+</body>
+</html>
