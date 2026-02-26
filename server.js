@@ -43,10 +43,28 @@ app.get('/.well-known/apple-developer-merchantid-domain-association', (req, res)
 });
 
 
-// ── SOLD OUT LIST ─────────────────────────────────────────────────────────────
-// Simple in-memory store — persists until server restarts
-// For permanent persistence, swap with a small JSON file or DB
-let soldOutItems = new Set();
+// ── SOLD OUT LIST — file-backed persistence ───────────────────────────────────
+const fs = require('fs');
+const SOLDOUT_FILE = path.join(__dirname, 'soldout.json');
+
+function loadSoldOut() {
+  try {
+    if (fs.existsSync(SOLDOUT_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SOLDOUT_FILE, 'utf8'));
+      return new Set(data);
+    }
+  } catch(e) { console.error('Could not load soldout.json:', e.message); }
+  return new Set();
+}
+
+function saveSoldOut() {
+  try {
+    fs.writeFileSync(SOLDOUT_FILE, JSON.stringify([...soldOutItems]), 'utf8');
+  } catch(e) { console.error('Could not save soldout.json:', e.message); }
+}
+
+let soldOutItems = loadSoldOut();
+console.log(`📋 Loaded ${soldOutItems.size} sold-out items from disk`);
 
 const STAFF_PIN = process.env.STAFF_PIN || '1234'; // change this in Railway vars!
 
@@ -62,6 +80,7 @@ app.post('/api/soldout', (req, res) => {
   } else {
     soldOutItems.add(item);
   }
+  saveSoldOut();
   console.log(`📋 Stock update: "${item}" → ${available ? 'IN STOCK' : 'SOLD OUT'}`);
   res.json({ success: true, soldOut: [...soldOutItems] });
 });
