@@ -72,9 +72,10 @@ app.post('/place-order', async (req, res) => {
   }
 
   // 2. Send text to shop iPhone
-  const orderLines = cart.map(i =>
-    `  • ${i.name} x${i.qty} = $${(i.price * i.qty).toFixed(2)}`
-  ).join('\n');
+  const orderLines = cart.map(i => {
+    const mods = i.modsDesc ? `\n      → ${i.modsDesc}` : '';
+    return `  • ${i.name} x${i.qty} = $${(i.price * i.qty).toFixed(2)}${mods}`;
+  }).join('\n');
   const total = (totalCents / 100).toFixed(2);
   const smsBody =
     `🚲☕ NEW ORDER — PAID\n` +
