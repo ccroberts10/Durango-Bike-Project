@@ -172,9 +172,10 @@ app.post('/place-order', async (req, res) => {
   const subtotal = cart.reduce((s,i) => s + i.price * i.qty, 0);
   const tax = subtotal * 0.094;
   const grandTotal = (totalCents / 100).toFixed(2);
+  const notesLine = notes ? `\nNotes: ${notes}` : '';
   const smsBody =
     `🚲☕ NEW ORDER — PAID\n` +
-    `Name: ${customerName}\n\n` +
+    `Name: ${customerName}${notesLine}\n\n` +
     `${orderLines}\n\n` +
     `Subtotal: $${subtotal.toFixed(2)}\n` +
     `Tax (9.4%): $${tax.toFixed(2)}\n` +
