@@ -45,8 +45,13 @@ const GMAIL_PASS = process.env.GMAIL_PASS || 'vijtZxlpgbelfhdp';
 const SHOP_SMS_EMAIL = '9709023252@vtext.com'; // Verizon email-to-SMS
 
 const mailer = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000,
 });
 const SHOP_PHONE          = '+19709023252';
 
@@ -170,19 +175,19 @@ app.post('/place-order', async (req, res) => {
     `Square ID: ${payment.id.slice(-8)}\n` +
     `Time: ${new Date().toLocaleTimeString()}`;
 
-  try {
-    await mailer.sendMail({
-      from: GMAIL_USER,
-      to: SHOP_SMS_EMAIL,
-      subject: '',
-      text: smsBody
-    });
+  // Send SMS in background — don't block the response
+  mailer.sendMail({
+    from: GMAIL_USER,
+    to: SHOP_SMS_EMAIL,
+    subject: 'New Order',
+    text: smsBody
+  }).then(() => {
     console.log('📱 SMS sent via Gmail gateway');
-  } catch (smsErr) {
+  }).catch(smsErr => {
     console.error('Email SMS error:', smsErr.message);
-  }
+  });
 
-  console.log(`✅ Order from ${customerName} — $${grandTotal} charged, SMS sent`);
+  console.log(`✅ Order from ${customerName} — $${grandTotal} charged`);
   res.json({ success: true, paymentId: payment.id });
 });
 
