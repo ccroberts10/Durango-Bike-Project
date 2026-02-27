@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Durango Bike Project — Order Ahead</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://web.squarecdn.com/v1/square.js"></script>
+<script src="https://web.squarecdn.com/v1/square.js" crossorigin="anonymous"></script>
 <style>
   :root {
     --espresso: #1A0F0A;
@@ -729,7 +729,19 @@ function closeModIfBg(e) {
 
 // ── SQUARE INIT ───────────────────────────────────────
 async function initSquare() {
-  if (!window.Square) { console.error('Square.js not loaded'); return; }
+  // Retry up to 5 times if Square.js hasn't loaded yet
+  let attempts = 0;
+  while (!window.Square && attempts < 10) {
+    await new Promise(r => setTimeout(r, 500));
+    attempts++;
+  }
+  if (!window.Square) {
+    console.error('Square.js not loaded after retries');
+    document.querySelectorAll('.sq-card-wrap').forEach(el => {
+      el.innerHTML = '<p style="color:#FF9999;font-size:12px;padding:8px">Card form unavailable — please call us to order.</p>';
+    });
+    return;
+  }
   const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
   initApplePay(payments); // non-blocking — shows if available
 
