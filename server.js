@@ -46,12 +46,13 @@ const SHOP_SMS_EMAIL = '9709023252@vtext.com'; // Verizon email-to-SMS
 
 const mailer = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
+  requireTLS: true,
   auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 5000,
+  connectionTimeout: 8000,
+  greetingTimeout: 8000,
+  socketTimeout: 8000,
 });
 const SHOP_PHONE          = '+19709023252';
 
