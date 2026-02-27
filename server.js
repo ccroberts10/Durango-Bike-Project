@@ -8,17 +8,15 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// CORS + CSP — needed for Squarespace and Square payments
+// CORS — needed for Squarespace and Square payments
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Content-Security-Policy',
-    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
-    "script-src * 'unsafe-inline' 'unsafe-eval'; " +
-    "frame-src *; " +
-    "connect-src *;"
-  );
+  // Remove any CSP headers that might block Square.js execution
+  res.removeHeader('Content-Security-Policy');
+  res.removeHeader('X-Content-Security-Policy');
+  res.removeHeader('X-WebKit-CSP');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
