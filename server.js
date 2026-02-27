@@ -169,7 +169,7 @@ app.post('/place-order', async (req, res) => {
     console.error('Twilio SMS error:', smsErr.message);
   }
 
-  console.log(`✅ Order from ${customerName} — $${total} charged, SMS sent`);
+  console.log(`✅ Order from ${customerName} — $${grandTotal} charged, SMS sent`);
   res.json({ success: true, paymentId: payment.id });
 });
 
