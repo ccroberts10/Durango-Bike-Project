@@ -38,28 +38,26 @@ const TWILIO_AUTH_TOKEN     = process.env.TWILIO_AUTH_TOKEN     || 'your_token';
 const TWILIO_FROM_NUMBER    = process.env.TWILIO_FROM_NUMBER    || '+1XXXXXXXXXX';
 const TWILIO_MESSAGING_SID  = process.env.TWILIO_MESSAGING_SID  || '';
 
-// SendGrid → Verizon SMS gateway
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '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';
-const GMAIL_USER = 'durangobikeproject@gmail.com';
-const SHOP_SMS_EMAIL = '9709023252@spectrummobile.com'; // Spectrum Mobile SMS gateway
+// Pushover push notifications
+const PUSHOVER_TOKEN = process.env.PUSHOVER_TOKEN || 'ajkb4qzhu3bqer78xoaihk87fimrjz';
+const PUSHOVER_USER  = process.env.PUSHOVER_USER  || 'u967fmt2645finxosgjrtnq4e6zffb';
 
-async function sendOrderSMS(body) {
-  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+async function sendOrderNotification(message) {
+  const res = await fetch('https://api.pushover.net/1/messages.json', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      personalizations: [{ to: [{ email: SHOP_SMS_EMAIL }] }],
-      from: { email: GMAIL_USER, name: 'DBP Orders' },
-      subject: 'New Order',
-      content: [{ type: 'text/plain', value: body }],
+      token: PUSHOVER_TOKEN,
+      user: PUSHOVER_USER,
+      message: message,
+      title: '🚲☕ New Order!',
+      sound: 'cashregister',
+      priority: 1, // high priority — bypasses quiet hours
     })
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`SendGrid error ${res.status}: ${err}`);
+    throw new Error(`Pushover error ${res.status}: ${err}`);
   }
 }
 const SHOP_PHONE          = '+19709023252';
@@ -184,11 +182,11 @@ app.post('/place-order', async (req, res) => {
     `Square ID: ${payment.id.slice(-8)}\n` +
     `Time: ${new Date().toLocaleTimeString()}`;
 
-  // Send SMS in background — don't block the response
-  sendOrderSMS(smsBody).then(() => {
-    console.log('📱 SMS sent via SendGrid → Verizon gateway');
-  }).catch(smsErr => {
-    console.error('SendGrid SMS error:', smsErr.message);
+  // Send push notification in background — don't block the response
+  sendOrderNotification(smsBody).then(() => {
+    console.log('📱 Push notification sent via Pushover');
+  }).catch(err => {
+    console.error('Pushover error:', err.message);
   });
 
   console.log(`✅ Order from ${customerName} — $${grandTotal} charged`);
