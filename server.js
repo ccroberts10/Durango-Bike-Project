@@ -1,5 +1,4 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const { Client, Environment } = require('square');
 const { randomUUID } = require('crypto');
@@ -39,21 +38,30 @@ const TWILIO_AUTH_TOKEN     = process.env.TWILIO_AUTH_TOKEN     || 'your_token';
 const TWILIO_FROM_NUMBER    = process.env.TWILIO_FROM_NUMBER    || '+1XXXXXXXXXX';
 const TWILIO_MESSAGING_SID  = process.env.TWILIO_MESSAGING_SID  || '';
 
-// Gmail → Verizon SMS gateway
-const GMAIL_USER = process.env.GMAIL_USER || 'durangobikeproject@gmail.com';
-const GMAIL_PASS = process.env.GMAIL_PASS || 'vijtZxlpgbelfhdp';
+// SendGrid → Verizon SMS gateway
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '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';
+const GMAIL_USER = 'durangobikeproject@gmail.com';
 const SHOP_SMS_EMAIL = '9709023252@vtext.com'; // Verizon email-to-SMS
 
-const mailer = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: { user: GMAIL_USER, pass: GMAIL_PASS },
-  connectionTimeout: 8000,
-  greetingTimeout: 8000,
-  socketTimeout: 8000,
-});
+async function sendOrderSMS(body) {
+  const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${SENDGRID_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: SHOP_SMS_EMAIL }] }],
+      from: { email: GMAIL_USER, name: 'DBP Orders' },
+      subject: 'New Order',
+      content: [{ type: 'text/plain', value: body }],
+    })
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`SendGrid error ${res.status}: ${err}`);
+  }
+}
 const SHOP_PHONE          = '+19709023252';
 
 const SQUARE_ACCESS_TOKEN = process.env.SQUARE_ACCESS_TOKEN || 'EAAAl0nyXfsbWNt6kfDb_1rNOSgkHF5sdPzK9i3c6XdFbPnr7AM930gq8364xKZu';
@@ -177,15 +185,10 @@ app.post('/place-order', async (req, res) => {
     `Time: ${new Date().toLocaleTimeString()}`;
 
   // Send SMS in background — don't block the response
-  mailer.sendMail({
-    from: GMAIL_USER,
-    to: SHOP_SMS_EMAIL,
-    subject: 'New Order',
-    text: smsBody
-  }).then(() => {
-    console.log('📱 SMS sent via Gmail gateway');
+  sendOrderSMS(smsBody).then(() => {
+    console.log('📱 SMS sent via SendGrid → Verizon gateway');
   }).catch(smsErr => {
-    console.error('Email SMS error:', smsErr.message);
+    console.error('SendGrid SMS error:', smsErr.message);
   });
 
   console.log(`✅ Order from ${customerName} — $${grandTotal} charged`);
