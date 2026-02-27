@@ -33,9 +33,10 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => res.status(200).send('OK'));
 
 // ── CONFIG ──────────────────────────────────────────────────────────────────
-const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || 'ACxxxxxxxxx';
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || 'your_token';
-const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+1XXXXXXXXXX';
+const TWILIO_ACCOUNT_SID    = process.env.TWILIO_ACCOUNT_SID    || 'ACxxxxxxxxx';
+const TWILIO_AUTH_TOKEN     = process.env.TWILIO_AUTH_TOKEN     || 'your_token';
+const TWILIO_FROM_NUMBER    = process.env.TWILIO_FROM_NUMBER    || '+1XXXXXXXXXX';
+const TWILIO_MESSAGING_SID  = process.env.TWILIO_MESSAGING_SID  || '';
 const SHOP_PHONE          = '+19709023252';
 
 const SQUARE_ACCESS_TOKEN = process.env.SQUARE_ACCESS_TOKEN || 'EAAAl0nyXfsbWNt6kfDb_1rNOSgkHF5sdPzK9i3c6XdFbPnr7AM930gq8364xKZu';
@@ -159,11 +160,17 @@ app.post('/place-order', async (req, res) => {
     `Time: ${new Date().toLocaleTimeString()}`;
 
   try {
-    await twilioClient.messages.create({
+    // Use Messaging Service SID if available, otherwise fall back to From number
+    const msgParams = {
       body: smsBody,
-      from: TWILIO_FROM_NUMBER,
       to: SHOP_PHONE,
-    });
+    };
+    if (TWILIO_MESSAGING_SID) {
+      msgParams.messagingServiceSid = TWILIO_MESSAGING_SID;
+    } else {
+      msgParams.from = TWILIO_FROM_NUMBER;
+    }
+    await twilioClient.messages.create(msgParams);
   } catch (smsErr) {
     // Payment succeeded — don't fail the request just because SMS errored
     console.error('Twilio SMS error:', smsErr.message);
