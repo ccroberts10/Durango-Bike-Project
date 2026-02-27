@@ -41,7 +41,7 @@ const TWILIO_MESSAGING_SID  = process.env.TWILIO_MESSAGING_SID  || '';
 // SendGrid → Verizon SMS gateway
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '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';
 const GMAIL_USER = 'durangobikeproject@gmail.com';
-const SHOP_SMS_EMAIL = '9709023252@vtext.com'; // Verizon email-to-SMS
+const SHOP_SMS_EMAIL = '9709023252@spectrummobile.com'; // Spectrum Mobile SMS gateway
 
 async function sendOrderSMS(body) {
   const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
