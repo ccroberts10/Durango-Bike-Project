@@ -342,6 +342,10 @@
             <label>Email (optional — for receipt)</label>
             <input type="email" id="desktop-email" placeholder="you@email.com">
           </div>
+          <div class="field-group">
+            <label>Order Notes (optional)</label>
+            <textarea id="desktop-notes" placeholder="e.g. light ice, half sweet, oat milk on the side..." rows="2" style="width:100%;background:var(--espresso);border:1px solid var(--mid);border-radius:8px;padding:10px 12px;color:var(--cream);font-family:'DM Sans',sans-serif;font-size:14px;resize:none;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--caramel)'" onblur="this.style.borderColor='var(--mid)'"></textarea>
+          </div>
           <button class="apple-pay-btn" id="desktop-apple-pay"></button>
           <div class="or-divider" id="desktop-or-divider">or pay by card</div>
           <div class="error-msg" id="desktop-error"></div>
@@ -446,7 +450,7 @@ const SERVER = 'https://order.durangobikeproject.com';
 // ── MODIFIERS ─────────────────────────────────────────
 const SYRUPS = [
   'Vanilla','Caramel','Lavender','Brown Sugar Cardamom',
-  'Vanilla Cinnamon','Rosemary Vanilla','Hazelnut','Pistachio'
+  'Vanilla Cinnamon','Rosemary Vanilla','Hazelnut','Pistachio','White Chocolate'
 ];
 const MILKS = ['Oat Milk','Almond Milk'];
 
@@ -583,11 +587,16 @@ async function submitOrder(sourceId, name, email, errorEl) {
   const TAX_RATE = 0.094;
   const subtotal = cart.reduce((s,i) => s+i.price*i.qty, 0);
   const totalCents = Math.round(subtotal * (1 + TAX_RATE) * 100);
+  const notesEl = document.getElementById(`${context}-notes`) ||
+                  document.getElementById('desktop-notes') ||
+                  document.getElementById('mobile-notes');
+  const notes = notesEl ? notesEl.value.trim() : '';
   const res = await fetch(`${SERVER}/place-order`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       sourceId, customerName: name, email: email || undefined,
+      notes: notes || undefined,
       cart: cart.map(i => ({
         ...i,
         modsDesc: i.modifiers && i.modifiers.length ? i.modifiers.map(m=>m.label).join(', ') : ''
@@ -606,6 +615,8 @@ async function submitOrder(sourceId, name, email, errorEl) {
     document.getElementById('mobile-name').value = '';
     document.getElementById('desktop-email').value = '';
     document.getElementById('mobile-email').value = '';
+    document.getElementById('desktop-notes').value = '';
+    document.getElementById('mobile-notes').value = '';
   } else {
     if (errorEl) showError(errorEl, data.error || 'Payment failed. Please try again.');
   }
