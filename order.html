@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Durango Bike Project — Order Ahead</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://web.squarecdn.com/v1/square.js" crossorigin="anonymous"></script>
+<script src="https://web.squarecdn.com/v1/square.js" onload="squareLoaded=true" crossorigin="anonymous"></script>
 <style>
   :root {
     --espresso: #1A0F0A;
@@ -729,19 +729,28 @@ function closeModIfBg(e) {
 
 // ── SQUARE INIT ───────────────────────────────────────
 async function initSquare() {
-  // Retry up to 5 times if Square.js hasn't loaded yet
-  let attempts = 0;
-  while (!window.Square && attempts < 10) {
-    await new Promise(r => setTimeout(r, 500));
-    attempts++;
-  }
+  // Wait for Square.js to be ready
   if (!window.Square) {
-    console.error('Square.js not loaded after retries');
-    document.querySelectorAll('.sq-card-wrap').forEach(el => {
-      el.innerHTML = '<p style="color:#FF9999;font-size:12px;padding:8px">Card form unavailable — please call us to order.</p>';
+    await new Promise((resolve, reject) => {
+      const script = document.querySelector('script[src*="squarecdn"]');
+      if (!script) { reject(new Error('Square script not found')); return; }
+      script.addEventListener('load', resolve);
+      script.addEventListener('error', reject);
+      // If already loaded but window.Square not set yet, poll briefly
+      let polls = 0;
+      const poll = setInterval(() => {
+        if (window.Square) { clearInterval(poll); resolve(); }
+        if (++polls > 20) { clearInterval(poll); reject(new Error('Square timeout')); }
+      }, 250);
+    }).catch(e => {
+      console.error('Square.js failed to load:', e.message);
+      document.querySelectorAll('.sq-card-wrap').forEach(el => {
+        el.innerHTML = '<p style="color:#FF9999;font-size:12px;padding:8px">Card form unavailable — please refresh the page.</p>';
+      });
+      return;
     });
-    return;
   }
+  if (!window.Square) return;
   const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
   initApplePay(payments); // non-blocking — shows if available
 
@@ -1002,7 +1011,12 @@ function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
 // Load sold-out list then build menu
 loadSoldOut().then(() => buildMenu());
 renderCart();
-initSquare();
+// Wait for full page load before initializing Square
+if (document.readyState === 'complete') {
+  initSquare();
+} else {
+  window.addEventListener('load', initSquare);
+}
 </script>
 </body>
 </html>
