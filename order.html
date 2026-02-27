@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Durango Bike Project — Order Ahead</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://web.squarecdn.com/v1/square.js" onload="squareLoaded=true" crossorigin="anonymous"></script>
 <style>
   :root {
     --espresso: #1A0F0A;
@@ -729,28 +728,7 @@ function closeModIfBg(e) {
 
 // ── SQUARE INIT ───────────────────────────────────────
 async function initSquare() {
-  // Wait for Square.js to be ready
-  if (!window.Square) {
-    await new Promise((resolve, reject) => {
-      const script = document.querySelector('script[src*="squarecdn"]');
-      if (!script) { reject(new Error('Square script not found')); return; }
-      script.addEventListener('load', resolve);
-      script.addEventListener('error', reject);
-      // If already loaded but window.Square not set yet, poll briefly
-      let polls = 0;
-      const poll = setInterval(() => {
-        if (window.Square) { clearInterval(poll); resolve(); }
-        if (++polls > 20) { clearInterval(poll); reject(new Error('Square timeout')); }
-      }, 250);
-    }).catch(e => {
-      console.error('Square.js failed to load:', e.message);
-      document.querySelectorAll('.sq-card-wrap').forEach(el => {
-        el.innerHTML = '<p style="color:#FF9999;font-size:12px;padding:8px">Card form unavailable — please refresh the page.</p>';
-      });
-      return;
-    });
-  }
-  if (!window.Square) return;
+  if (!window.Square) { console.error('window.Square not available'); return; }
   const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
   initApplePay(payments); // non-blocking — shows if available
 
@@ -1011,12 +989,31 @@ function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
 // Load sold-out list then build menu
 loadSoldOut().then(() => buildMenu());
 renderCart();
-// Wait for full page load before initializing Square
-if (document.readyState === 'complete') {
-  initSquare();
-} else {
-  window.addEventListener('load', initSquare);
+// Square initialized via dynamic script loader below
+</script>
+<script>
+// Load Square.js dynamically after page is ready
+function loadSquareScript() {
+  return new Promise((resolve, reject) => {
+    if (window.Square) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://web.squarecdn.com/v1/square.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Failed to load Square.js'));
+    document.head.appendChild(s);
+  });
 }
+window.addEventListener('load', async () => {
+  try {
+    await loadSquareScript();
+    await initSquare();
+  } catch(e) {
+    console.error('Square load error:', e.message);
+    document.querySelectorAll('.sq-card-wrap').forEach(el => {
+      el.innerHTML = '<p style="color:#FF9999;font-size:12px;padding:8px">Card form unavailable — please refresh.</p>';
+    });
+  }
+});
 </script>
 </body>
 </html>
