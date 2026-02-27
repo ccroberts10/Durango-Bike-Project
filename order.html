@@ -342,10 +342,6 @@
             <label>Email (optional — for receipt)</label>
             <input type="email" id="desktop-email" placeholder="you@email.com">
           </div>
-          <div class="field-group">
-            <label>Order Notes (optional)</label>
-            <textarea id="desktop-notes" placeholder="e.g. light ice, half sweet, oat milk on the side..." rows="2" style="width:100%;background:var(--espresso);border:1px solid var(--mid);border-radius:8px;padding:10px 12px;color:var(--cream);font-family:'DM Sans',sans-serif;font-size:14px;resize:none;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--caramel)'" onblur="this.style.borderColor='var(--mid)'"></textarea>
-          </div>
           <button class="apple-pay-btn" id="desktop-apple-pay"></button>
           <div class="or-divider" id="desktop-or-divider">or pay by card</div>
           <div class="error-msg" id="desktop-error"></div>
@@ -421,6 +417,15 @@
     <div class="mod-title" id="mod-item-name"></div>
     <div class="mod-base-price" id="mod-item-price"></div>
     <div id="mod-body"></div>
+    <div style="margin-top:16px">
+      <span class="mod-section-label">Special Instructions (optional)</span>
+      <textarea id="mod-notes" placeholder="e.g. light ice, half sweet, no foam..." rows="2"
+        style="width:100%;background:var(--espresso);border:1px solid var(--mid);border-radius:8px;
+        padding:10px 12px;color:var(--cream);font-family:'DM Sans',sans-serif;font-size:14px;
+        resize:none;outline:none;transition:border-color 0.2s;margin-top:6px;"
+        onfocus="this.style.borderColor='var(--caramel)'"
+        onblur="this.style.borderColor='var(--mid)'"></textarea>
+    </div>
     <div class="mod-footer">
       <button class="mod-cancel" onclick="closeModModal()">Cancel</button>
       <button class="mod-add" id="mod-add-btn" onclick="confirmModifiers()">Add to Order — <span id="mod-total"></span></button>
@@ -599,7 +604,10 @@ async function submitOrder(sourceId, name, email, errorEl) {
       notes: notes || undefined,
       cart: cart.map(i => ({
         ...i,
-        modsDesc: i.modifiers && i.modifiers.length ? i.modifiers.map(m=>m.label).join(', ') : ''
+        modsDesc: [
+          ...(i.modifiers||[]).map(m=>m.label),
+          i.notes||''
+        ].filter(Boolean).join(', ')
       })),
       totalCents
     })
@@ -719,7 +727,8 @@ function confirmModifiers() {
     label: b.dataset.label,
     price: parseFloat(b.dataset.price)
   }));
-  addToCart(_modState.label, _modState.price, selected);
+  const notes = document.getElementById('mod-notes').value.trim();
+  addToCart(_modState.label, _modState.price, selected, notes);
   // Flash the source card
   if (_modState.sourceCard) {
     _modState.sourceCard.classList.add('added');
@@ -730,6 +739,7 @@ function confirmModifiers() {
 
 function closeModModal() {
   document.getElementById('mod-overlay').classList.remove('open');
+  document.getElementById('mod-notes').value = '';
   document.body.style.overflow = '';
 }
 
@@ -835,29 +845,23 @@ function makeCard(name, price, size, mods) {
     <div class="item-name">${name}</div>
     <div class="item-footer">
       <span class="item-price">$${price.toFixed(2)}</span>
-      <span class="tap-hint">${hasMods ? 'customize' : 'tap to add'}</span>
+      <span class="tap-hint">tap to add</span>
     </div>
   `;
   card.addEventListener('click', () => {
-    if (hasMods) {
-      openModifierModal(label, price, mods, card);
-    } else {
-      addToCart(label, price, []);
-      card.classList.add('added');
-      setTimeout(() => card.classList.remove('added'), 700);
-    }
+    openModifierModal(label, price, mods, card);
   });
   return card;
 }
 
 // ── CART ──────────────────────────────────────────────
-function addToCart(name, price, modifiers) {
-  const modsKey = modifiers.map(m=>m.label).join(',');
+function addToCart(name, price, modifiers, notes) {
+  const modsKey = modifiers.map(m=>m.label).join(',') + (notes ? '|' + notes : '');
   const existing = cart.find(i => i.name === name && i.modsKey === modsKey);
   if (existing) { existing.qty++; }
   else {
     const modPrice = modifiers.reduce((s,m) => s+m.price, 0);
-    cart.push({name, price: price + modPrice, basePrice: price, modifiers, modsKey, qty:1, id:Date.now()});
+    cart.push({name, price: price + modPrice, basePrice: price, modifiers, modsKey, notes: notes||'', qty:1, id:Date.now()});
   }
   renderCart();
 }
@@ -873,8 +877,8 @@ function changeQty(id, delta) {
 function cartItemsHTML() {
   if (!cart.length) return `<div class="cart-empty"><div class="cart-empty-icon">☕</div><p>Tap any item to add it to your order!</p></div>`;
   return cart.map(item => {
-    const modsList = item.modifiers && item.modifiers.length
-      ? `<div class="cart-item-mods">${item.modifiers.map(m=>m.label).join(' · ')}</div>` : '';
+    const modsList = (item.modifiers && item.modifiers.length) || item.notes
+      ? `<div class="cart-item-mods">${[...( item.modifiers||[]).map(m=>m.label), item.notes||''].filter(Boolean).join(' · ')}</div>` : '';
     return `
     <div class="cart-item">
       <div class="cart-item-name">${item.name}${modsList}</div>
