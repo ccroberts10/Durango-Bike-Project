@@ -897,8 +897,17 @@ function renderCart() {
   document.getElementById('mobile-cart-footer').style.display = hasItems ? 'block' : 'none';
 
   if (hasItems) {
-    document.getElementById('desktop-total').textContent = '$' + total.toFixed(2);
-    document.getElementById('mobile-total').textContent = '$' + total.toFixed(2);
+    const TAX_RATE = 0.094;
+    const tax = total * TAX_RATE;
+    const grandTotal = total + tax;
+    ['desktop', 'mobile'].forEach(ctx => {
+      const subtotalEl = document.getElementById(`${ctx}-subtotal`);
+      const taxEl = document.getElementById(`${ctx}-tax`);
+      const totalEl = document.getElementById(`${ctx}-total`);
+      if (subtotalEl) subtotalEl.textContent = '$' + total.toFixed(2);
+      if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
+      if (totalEl) totalEl.textContent = '$' + grandTotal.toFixed(2);
+    });
   }
 }
 
