@@ -8,12 +8,20 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// CORS — needed for Squarespace and Square payments
+// CORS — allow requests from any origin including Squarespace
+const ALLOWED_ORIGINS = [
+  'https://www.durangobikeproject.com',
+  'https://durangobikeproject.com',
+  'https://order.durangobikeproject.com',
+];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  const origin = req.headers.origin;
+  // Allow all origins (needed for Squarespace iframes)
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  // Remove any CSP headers that might block Square.js execution
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.removeHeader('Content-Security-Policy');
   res.removeHeader('X-Content-Security-Policy');
   res.removeHeader('X-WebKit-CSP');
