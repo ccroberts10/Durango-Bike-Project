@@ -191,6 +191,27 @@
     content: ''; flex: 1; height: 1px; background: var(--mid);
   }
 
+
+  /* TIP SELECTOR */
+  .tip-section { margin-bottom:14px; }
+  .tip-label { font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--warm-gray); margin-bottom:8px; display:block; }
+  .tip-btns { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .tip-btn {
+    padding:9px 4px; border-radius:8px; border:1px solid var(--mid);
+    background:var(--espresso); color:var(--cream); font-family:'DM Sans',sans-serif;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; text-align:center;
+  }
+  .tip-btn:hover { border-color:var(--caramel); }
+  .tip-btn.selected { background:rgba(193,127,58,0.2); border-color:var(--caramel); color:var(--caramel); }
+  .tip-custom-wrap { margin-top:6px; position:relative; display:none; }
+  .tip-custom-wrap.show { display:block; }
+  .tip-custom-prefix { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--warm-gray); font-size:14px; }
+  .tip-custom-input {
+    width:100%; background:var(--espresso); border:1px solid var(--mid); border-radius:8px;
+    padding:10px 12px 10px 24px; color:var(--cream); font-family:'DM Sans',sans-serif;
+    font-size:14px; outline:none; transition:border-color 0.2s;
+  }
+  .tip-custom-input:focus { border-color:var(--caramel); }
   /* MODIFIER MODAL */
   .mod-overlay {
     position:fixed; inset:0; background:rgba(0,0,0,0.72); z-index:500;
@@ -330,9 +351,26 @@
             <span style="font-size:11px;color:var(--warm-gray);font-weight:600;letter-spacing:1px;text-transform:uppercase">Tax (9.4%)</span>
             <span style="font-size:14px;color:var(--warm-gray)" id="desktop-tax">$0.00</span>
           </div>
+          <div class="total-row" id="desktop-tip-row" style="margin-bottom:4px;display:none">
+            <span style="font-size:11px;color:var(--warm-gray);font-weight:600;letter-spacing:1px;text-transform:uppercase">Tip</span>
+            <span style="font-size:14px;color:var(--warm-gray)" id="desktop-tip-display">$0.00</span>
+          </div>
           <div class="total-row">
             <span class="total-label">Total</span>
             <span class="total-val" id="desktop-total">$0.00</span>
+          </div>
+          <div class="tip-section">
+            <span class="tip-label">Add a Tip ☕</span>
+            <div class="tip-btns">
+              <button class="tip-btn" onclick="setTip(1,'desktop',this)">$1</button>
+              <button class="tip-btn" onclick="setTip(2,'desktop',this)">$2</button>
+              <button class="tip-btn" onclick="setTip(3,'desktop',this)">$3</button>
+              <button class="tip-btn" onclick="setTip('custom','desktop',this)">Custom</button>
+            </div>
+            <div class="tip-custom-wrap" id="desktop-tip-custom-wrap">
+              <span class="tip-custom-prefix">$</span>
+              <input type="number" class="tip-custom-input" id="desktop-tip-custom" min="0" step="0.50" placeholder="0.00" oninput="updateTipFromCustom('desktop')">
+            </div>
           </div>
           <div class="field-group">
             <label>Your Name (for pickup)</label>
@@ -384,6 +422,10 @@
         <div class="total-row" style="margin-bottom:12px">
           <span style="font-size:11px;color:var(--warm-gray);font-weight:600;letter-spacing:1px;text-transform:uppercase">Tax (9.4%)</span>
           <span style="font-size:14px;color:var(--warm-gray)" id="mobile-tax">$0.00</span>
+        </div>
+        <div class="total-row" id="mobile-tip-row" style="margin-bottom:4px;display:none">
+          <span style="font-size:11px;color:var(--warm-gray);font-weight:600;letter-spacing:1px;text-transform:uppercase">Tip</span>
+          <span style="font-size:14px;color:var(--warm-gray)" id="mobile-tip-display">$0.00</span>
         </div>
         <div class="total-row">
           <span class="total-label">Total</span>
@@ -591,7 +633,7 @@ async function handleApplePay(applePay, context) {
 async function submitOrder(sourceId, name, email, errorEl) {
   const TAX_RATE = 0.094;
   const subtotal = cart.reduce((s,i) => s+i.price*i.qty, 0);
-  const totalCents = Math.round(subtotal * (1 + TAX_RATE) * 100);
+  const totalCents = Math.round((subtotal * (1 + TAX_RATE) + tipAmount) * 100);
   const notesEl = document.getElementById(`${context}-notes`) ||
                   document.getElementById('desktop-notes') ||
                   document.getElementById('mobile-notes');
@@ -602,6 +644,7 @@ async function submitOrder(sourceId, name, email, errorEl) {
     body: JSON.stringify({
       sourceId, customerName: name, email: email || undefined,
       notes: notes || undefined,
+      tip: tipAmount || 0,
       cart: cart.map(i => ({
         ...i,
         modsDesc: [
@@ -625,6 +668,11 @@ async function submitOrder(sourceId, name, email, errorEl) {
     document.getElementById('mobile-email').value = '';
     document.getElementById('desktop-notes').value = '';
     document.getElementById('mobile-notes').value = '';
+    tipAmount = 0;
+    document.querySelectorAll('.tip-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.tip-custom-wrap').forEach(w => w.classList.remove('show'));
+    document.querySelectorAll('.tip-custom-input').forEach(i => i.value = '');
+    updateTotalsWithTip();
   } else {
     if (errorEl) showError(errorEl, data.error || 'Payment failed. Please try again.');
   }
@@ -892,6 +940,54 @@ function cartItemsHTML() {
   }).join('');
 }
 
+
+// ── TIP ───────────────────────────────────────────────
+let tipAmount = 0;
+
+function setTip(amount, ctx, btn) {
+  // Deselect all tip buttons in this context
+  btn.closest('.tip-btns').querySelectorAll('.tip-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+
+  const customWrap = document.getElementById(`${ctx}-tip-custom-wrap`);
+  if (amount === 'custom') {
+    customWrap.classList.add('show');
+    const input = document.getElementById(`${ctx}-tip-custom`);
+    input.focus();
+    tipAmount = parseFloat(input.value) || 0;
+  } else {
+    customWrap.classList.remove('show');
+    tipAmount = amount;
+  }
+  updateTotalsWithTip();
+}
+
+function updateTipFromCustom(ctx) {
+  const val = parseFloat(document.getElementById(`${ctx}-tip-custom`).value) || 0;
+  tipAmount = val;
+  updateTotalsWithTip();
+}
+
+function updateTotalsWithTip() {
+  const subtotal = cart.reduce((s,i) => s+i.price*i.qty, 0);
+  const TAX_RATE = 0.094;
+  const tax = subtotal * TAX_RATE;
+  const grandTotal = subtotal + tax + tipAmount;
+
+  ['desktop', 'mobile'].forEach(ctx => {
+    const subtotalEl = document.getElementById(`${ctx}-subtotal`);
+    const taxEl = document.getElementById(`${ctx}-tax`);
+    const totalEl = document.getElementById(`${ctx}-total`);
+    const tipRow = document.getElementById(`${ctx}-tip-row`);
+    const tipDisplay = document.getElementById(`${ctx}-tip-display`);
+    if (subtotalEl) subtotalEl.textContent = '$' + subtotal.toFixed(2);
+    if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
+    if (totalEl) totalEl.textContent = '$' + grandTotal.toFixed(2);
+    if (tipRow) tipRow.style.display = tipAmount > 0 ? 'flex' : 'none';
+    if (tipDisplay) tipDisplay.textContent = '$' + tipAmount.toFixed(2);
+  });
+}
+
 function renderCart() {
   const total = cart.reduce((s,i) => s+i.price*i.qty, 0);
   const count = cart.reduce((s,i) => s+i.qty, 0);
@@ -911,17 +1007,7 @@ function renderCart() {
   document.getElementById('mobile-cart-footer').style.display = hasItems ? 'block' : 'none';
 
   if (hasItems) {
-    const TAX_RATE = 0.094;
-    const tax = total * TAX_RATE;
-    const grandTotal = total + tax;
-    ['desktop', 'mobile'].forEach(ctx => {
-      const subtotalEl = document.getElementById(`${ctx}-subtotal`);
-      const taxEl = document.getElementById(`${ctx}-tax`);
-      const totalEl = document.getElementById(`${ctx}-total`);
-      if (subtotalEl) subtotalEl.textContent = '$' + total.toFixed(2);
-      if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
-      if (totalEl) totalEl.textContent = '$' + grandTotal.toFixed(2);
-    });
+    updateTotalsWithTip();
   }
 }
 
