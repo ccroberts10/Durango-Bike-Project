@@ -1,4 +1,5 @@
 const express = require('express');
+const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const { Client, Environment } = require('square');
 const { randomUUID } = require('crypto');
@@ -37,6 +38,16 @@ const TWILIO_ACCOUNT_SID    = process.env.TWILIO_ACCOUNT_SID    || 'ACxxxxxxxxx'
 const TWILIO_AUTH_TOKEN     = process.env.TWILIO_AUTH_TOKEN     || 'your_token';
 const TWILIO_FROM_NUMBER    = process.env.TWILIO_FROM_NUMBER    || '+1XXXXXXXXXX';
 const TWILIO_MESSAGING_SID  = process.env.TWILIO_MESSAGING_SID  || '';
+
+// Gmail → Verizon SMS gateway
+const GMAIL_USER = process.env.GMAIL_USER || 'durangobikeproject@gmail.com';
+const GMAIL_PASS = process.env.GMAIL_PASS || 'vijtZxlpgbelfhdp';
+const SHOP_SMS_EMAIL = '9709023252@vtext.com'; // Verizon email-to-SMS
+
+const mailer = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: GMAIL_USER, pass: GMAIL_PASS }
+});
 const SHOP_PHONE          = '+19709023252';
 
 const SQUARE_ACCESS_TOKEN = process.env.SQUARE_ACCESS_TOKEN || 'EAAAl0nyXfsbWNt6kfDb_1rNOSgkHF5sdPzK9i3c6XdFbPnr7AM930gq8364xKZu';
@@ -160,20 +171,15 @@ app.post('/place-order', async (req, res) => {
     `Time: ${new Date().toLocaleTimeString()}`;
 
   try {
-    // Use Messaging Service SID if available, otherwise fall back to From number
-    const msgParams = {
-      body: smsBody,
-      to: SHOP_PHONE,
-    };
-    if (TWILIO_MESSAGING_SID) {
-      msgParams.messagingServiceSid = TWILIO_MESSAGING_SID;
-    } else {
-      msgParams.from = TWILIO_FROM_NUMBER;
-    }
-    await twilioClient.messages.create(msgParams);
+    await mailer.sendMail({
+      from: GMAIL_USER,
+      to: SHOP_SMS_EMAIL,
+      subject: '',
+      text: smsBody
+    });
+    console.log('📱 SMS sent via Gmail gateway');
   } catch (smsErr) {
-    // Payment succeeded — don't fail the request just because SMS errored
-    console.error('Twilio SMS error:', smsErr.message);
+    console.error('Email SMS error:', smsErr.message);
   }
 
   console.log(`✅ Order from ${customerName} — $${grandTotal} charged, SMS sent`);
